@@ -14,7 +14,7 @@ struct Chip8_CPU
     u8 DT;
     u8 ST;
     u16 PC;
-    u8 SP;
+    u16 SP;
 };
 
 int main(int argc, const char ** argv)
@@ -26,10 +26,11 @@ int main(int argc, const char ** argv)
     }
 
     Chip8_CPU cpu;
-    cpu.PC = 0x0200;
+    cpu.PC = 0x00000200;
     cpu.DT = 0x0000;
     cpu.ST = 0x0000;
-    // @Todo: Stack Pointer?
+    cpu.SP = 0x00000EA0;
+    // display buffer at 0x00000F00
 
     u8 memory[0x1000];
 
@@ -66,7 +67,8 @@ int main(int argc, const char ** argv)
             The interpreter sets the program counter to the address at the top
             of the stack, then subtracts 1 from the stack pointer. */
             case 0x00EE:
-                // @Todo: PONG
+                cpu.PC = (memory[cpu.SP] << 8) + memory[cpu.SP + 1];
+                cpu.SP -= 2;
                 break;
             /* 0nnn - SYS addr
             Jump to a machine code routine at nnn.
@@ -89,6 +91,10 @@ int main(int argc, const char ** argv)
         on the top of the stack. The PC is then set to nnn. */
         case 0x2000:
             // @Todo: PONG
+            cpu.SP += 2;
+            memory[cpu.SP] = cpu.PC >> 8;
+            memory[cpu.SP + 1] = cpu.PC;
+            cpu.PC = opcode & 0x0FFF;
             break;
         /* 3xkk - SE Vx, byte
         Skip next instruction if Vx = kk.
