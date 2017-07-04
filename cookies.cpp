@@ -25,15 +25,16 @@ int main(int argc, const char ** argv)
         return 1;
     }
 
+    // Init CPU and memory
     Chip8_CPU cpu;
     cpu.PC = 0x00000200;
     cpu.DT = 0x0000;
     cpu.ST = 0x0000;
     cpu.SP = 0x00000EA0;
-    // display buffer at 0x00000F00
-
     u8 memory[0x1000];
+    u8 * display = memory + 0xF00;
 
+    // Read program from file
     FILE * program = fopen(argv[1], "rb");
     if (program == NULL) {
         printf("Error: File %s doesn't exist\n", argv[1]);
@@ -90,7 +91,6 @@ int main(int argc, const char ** argv)
         The interpreter increments the stack pointer, then puts the current PC
         on the top of the stack. The PC is then set to nnn. */
         case 0x2000:
-            // @Todo: PONG
             cpu.SP += 2;
             memory[cpu.SP] = cpu.PC >> 8;
             memory[cpu.SP + 1] = cpu.PC;
@@ -203,9 +203,24 @@ int main(int argc, const char ** argv)
         the screen. See instruction 8xy3 for more information on XOR, and
         section 2.4, Display, for more information on the Chip-8 screen and
         sprites. */
-        case 0xD000:
+        case 0xD000: {
             // @Todo: PONG
+            u8 n = opcode & 0x000F;
+            u8 x = cpu.V[(opcode & 0x0F00) >> 8];
+            u8 y = cpu.V[(opcode & 0x00F0) >> 8];
+            u8 * d = display + cpu.V[(opcode & 0x0F00) >> 8] + ;
+            while (n > 0) {
+                d[x] ^= memory[cpu.I];
+                n--;
+                y++;
+            }
             break;
+            // no
+            // this doesn't work like that
+            // it's harder than it seems (indexing bit by bit :( )
+            // i have to figure out how to use shifts to make this work
+            // fuck
+        }
         // E___ - Keyboard
         case 0xE000:
             switch (opcode & 0x00FF) {
