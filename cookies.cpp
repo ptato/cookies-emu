@@ -49,6 +49,8 @@ int main(int argc, const char ** argv)
         opcode = memory[cpu.PC];
         cpu.PC += 0x0002;
 
+        // @Todo: timers...
+
         switch (opcode & 0xF000) {
         /* 0___ - ??? */
         case 0x0000:
@@ -78,7 +80,7 @@ int main(int argc, const char ** argv)
         Jump to location nnn.
         The interpreter sets the program counter to nnn. */
         case 0x1000:
-            // @Todo: PONG
+            cpu.PC = opcode & 0x0FFF;
             break;
         /* 2nnn - CALL addr
         Call subroutine at nnn.
@@ -92,14 +94,16 @@ int main(int argc, const char ** argv)
         The interpreter compares register Vx to kk, and if they are equal,
         increments the program counter by 2. */
         case 0x3000:
-            // @Todo: PONG
+            if (cpu.V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
+                cpu.PC += 2;
             break;
         /* 4xkk - SNE Vx, byte
         Skip next instruction if Vx != kk.
         The interpreter compares register Vx to kk, and if they are not equal,
         increments the program counter by 2. */
         case 0x4000:
-            // @Todo: PONG
+            if (cpu.V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
+                cpu.PC += 2;
             break;
         /* 6xkk - LD Vx, byte
         Set Vx = kk.
@@ -112,7 +116,7 @@ int main(int argc, const char ** argv)
         Adds the value kk to the value of register Vx, then stores the
         result in Vx. */
         case 0x7000:
-            // @Todo: PONG
+            cpu.V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
             break;
         /* 8___ - ALU or some shit */
         case 0x8000:
@@ -121,7 +125,7 @@ int main(int argc, const char ** argv)
             Set Vx = Vy.
             Stores the value of register Vy in register Vx. */
             case 0x0000:
-                // @Todo: PONG
+                cpu.V[(opcode & 0x0F00) >> 8] = cpu.V[(opcode & 0x00F0) >> 8];
                 break;
             /* 8xy2 - AND Vx, Vy
             Set Vx = Vx AND Vy.
@@ -130,7 +134,7 @@ int main(int argc, const char ** argv)
             from two values, and if both bits are 1, then the same bit in
             the result is also 1. Otherwise, it is 0. */
             case 0x0002:
-                // @Todo: PONG
+                cpu.V[(opcode & 0x0F00) >> 8] &= cpu.V[(opcode & 0x00F0) >> 8];
                 break;
             /* 8xy4 - ADD Vx, Vy
             Set Vx = Vx + Vy, set VF = carry.
@@ -138,16 +142,25 @@ int main(int argc, const char ** argv)
             greater than 8 bits (i.e., > 255,) VF is set to 1, otherwise 0.
             Only the lowest 8 bits of the result are kept, and
             stored in Vx. */
-            case 0x0004:
-                // @Todo: PONG
+            case 0x0004: {
+                u8 x = cpu.V[(opcode & 0x0F00) >> 8];
+                u8 y = cpu.V[(opcode & 0x00F0) >> 8];
+                u8 r = x + y;
+                cpu.V[0xF] = r < x || r < y ? 0x0001 : 0x0000;
+                cpu.V[(opcode & 0x0F00) >> 8] = r;
                 break;
+            }
             /* 8xy5 - SUB Vx, Vy
             Set Vx = Vx - Vy, set VF = NOT borrow.
             If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted
             from Vx, and the results stored in Vx. */
-            case 0x0005:
-                // @Todo: PONG
+            case 0x0005: {
+                u8 x = cpu.V[(opcode & 0x0F00) >> 8];
+                u8 y = cpu.V[(opcode & 0x00F0) >> 8];
+                cpu.V[0xF] = x > y ? 0x0001 : 0x0000;
+                cpu.V[(opcode & 0x0F00) >> 8] = x - y;
                 break;
+            }
             default:
                 printf("Error: unimplemented ALU op: %.4X\n", opcode);
                 break;
@@ -165,7 +178,11 @@ int main(int argc, const char ** argv)
         then ANDed with the value kk. The results are stored in Vx. See
         instruction 8xy2 for more information on AND. */
         case 0xC000:
-            // @Todo: PONG
+            // Xorshift
+            randomst ^= (randomst << 7);
+            randomst ^= (randomst >> 5);
+            randomst ^= (randomst << 3);
+            cpu.V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF & randomst;
             break;
         /* Dxyn - DRW Vx, Vy, nibble
         Display n-byte sprite starting at memory location I at (Vx, Vy),
@@ -204,19 +221,19 @@ int main(int argc, const char ** argv)
             Set Vx = delay timer value.
             The value of DT is placed into Vx. */
             case 0x0007:
-                // @Todo: PONG
+                cpu.V[(opcode & 0x0F00) >> 8] = cpu.DT;
                 break;
             /* Fx15 - LD DT, Vx
             Set delay timer = Vx.
             DT is set equal to the value of Vx. */
             case 0x0015:
-                // @Todo: PONG
+                cpu.DT = cpu.V[(opcode & 0x0F00) >> 8];
                 break;
             /* Fx18 - LD ST, Vx
             Set sound timer = Vx.
             ST is set equal to the value of Vx. */
             case 0x0018:
-                // @Todo: PONG
+                cpu.ST = cpu.V[(opcode & 0x0F00) >> 8];
                 break;
             /* Fx29 - LD F, Vx
             Set I = location of sprite for digit Vx.
@@ -251,7 +268,7 @@ int main(int argc, const char ** argv)
             break;
         }
 
-        break;
+        // @Todo: timers, display...
     }
 
     // Cleanup?
