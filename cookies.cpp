@@ -44,9 +44,10 @@ int main(int argc, const char ** argv)
     fread(memory + cpu.PC, 1, program_size, program);
     fclose(program);
 
+    u8 randomst = 1;
     u16 opcode;
     while (true) {
-        opcode = memory[cpu.PC];
+        opcode = memory[cpu.PC] << 8 + memory[cpu.PC + 1];
         cpu.PC += 0x0002;
 
         // @Todo: timers...
@@ -72,7 +73,7 @@ int main(int argc, const char ** argv)
             This instruction is only used on the old computers on which Chip-8
             was originally implemented. It is ignored by modern interpreters. */
             default:
-                printf("Found SYS opcode\n");
+                printf("Found SYS opcode: %.4X\n", opcode);
                 break;
             }
             break;
