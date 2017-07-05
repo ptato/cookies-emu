@@ -285,16 +285,23 @@ int main(int argc, const char ** argv)
             The interpreter takes the decimal value of Vx, and places the
             hundreds digit in memory at location in I, the tens digit at
             location I+1, and the ones digit at location I+2. */
-            case 0x0033:
-                // @Todo: PONG
+            case 0x0033: {
+                u8 x = cpu.V[(opcode & 0x0F00) >> 8];
+                memory[cpu.I] = x / 100;
+                memory[cpu.I + 1] = x / 10 % 10;
+                memory[cpu.I + 2] = x % 10;
                 break;
+            }
             /* Fx65 - LD Vx, [I]
             Read registers V0 through Vx from memory starting at location I.
             The interpreter reads values from memory starting at location I into
             registers V0 through Vx. */
-            case 0x0065:
-                // @Todo: PONG
+            case 0x0065: {
+                u8 x = cpu.V[(opcode & 0x0F00) >> 8];
+                for (int i = 0; i <= x; i++)
+                    cpu.V[i] = memory[cpu.I + i];
                 break;
+            }
             default:
                 printf("Error: unimplemented FXXX function: %.4X\n", opcode);
                 break;
