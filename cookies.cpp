@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <cstdio>
 
-#define u8 uint8_t
-#define u16 uint16_t
+using u8 = uint8_t;
+using u16 = uint16_t;
 
 struct Chip8_CPU
 {
