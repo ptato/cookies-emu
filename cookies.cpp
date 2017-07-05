@@ -205,21 +205,36 @@ int main(int argc, const char ** argv)
         sprites. */
         case 0xD000: {
             // @Todo: PONG
+            // http://www.emulator101.com/chip-8-sprites.html
+            // i'm not sure if it's well implemented and i'm 100% sure it can be
+            // optimized a lot but it's 2am and i'm tired see you tomorrow
             u8 n = opcode & 0x000F;
-            u8 x = cpu.V[(opcode & 0x0F00) >> 8];
-            u8 y = cpu.V[(opcode & 0x00F0) >> 8];
-            u8 * d = display + cpu.V[(opcode & 0x0F00) >> 8] + ;
+            u16 i = cpu.I;
+            u8 offset = cpu.V[(opcode & 0x0F00) >> 8] +
+                64 * cpu.V[(opcode & 0x00F0) >> 8];
+
+            u8 bitshift;
             while (n > 0) {
-                d[x] ^= memory[cpu.I];
+                bitshift = 8;
+                while (bitshift > 0) {
+                    bitshift--;
+                    if (memory[i] & (1 << bitshift)) {
+                        // Determine the address of the effected byte on the screen
+                        u16 address = display + offset / 8;
+                        // Determine the effected bit in the byte
+                        u8 effected_bit = offset % 8;
+                        // Check to see if the screen's bit is set and set VF appropriately
+                        if (*address & (1 << effected_bit))
+                            cpu.V[0xF] = 1;
+                        // XOR the source bit and screen bit
+                        // Write the effected bit to the screen
+                        *address ^= memory[i] & (1 << bitshift);
+                    }
+                }
+                i++;
                 n--;
-                y++;
             }
             break;
-            // no
-            // this doesn't work like that
-            // it's harder than it seems (indexing bit by bit :( )
-            // i have to figure out how to use shifts to make this work
-            // fuck
         }
         // E___ - Keyboard
         case 0xE000:
