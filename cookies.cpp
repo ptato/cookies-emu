@@ -204,10 +204,8 @@ int main(int argc, const char ** argv)
         section 2.4, Display, for more information on the Chip-8 screen and
         sprites. */
         case 0xD000: {
-            // @Todo: PONG
             // http://www.emulator101.com/chip-8-sprites.html
-            // i'm not sure if it's well implemented and i'm 100% sure it can be
-            // optimized a lot but it's 2am and i'm tired see you tomorrow
+            // i'm not sure if it's well implemented and i'm 100% sure it can be optimized
             u8 n = opcode & 0x000F;
             u16 i = cpu.I;
             u8 offset = cpu.V[(opcode & 0x0F00) >> 8] +
@@ -218,9 +216,10 @@ int main(int argc, const char ** argv)
                 bitshift = 8;
                 while (bitshift > 0) {
                     bitshift--;
+
                     if (memory[i] & (1 << bitshift)) {
                         // Determine the address of the effected byte on the screen
-                        u16 address = display + offset / 8;
+                        u8 * address = display + offset / 8;
                         // Determine the effected bit in the byte
                         u8 effected_bit = offset % 8;
                         // Check to see if the screen's bit is set and set VF appropriately
@@ -228,9 +227,11 @@ int main(int argc, const char ** argv)
                             cpu.V[0xF] = 1;
                         // XOR the source bit and screen bit
                         // Write the effected bit to the screen
-                        *address ^= memory[i] & (1 << bitshift);
+                        *address ^= 1 << effected_bit;
                     }
+                    offset++;
                 }
+                offset += 56;
                 i++;
                 n--;
             }
