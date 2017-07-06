@@ -9,7 +9,7 @@
 using u8 = uint8_t;
 using u16 = uint16_t;
 
-struct Chip8_CPU
+struct Chip8_State
 {
     u8 V[0x0010];
     u16 I;
@@ -17,7 +17,31 @@ struct Chip8_CPU
     u8 ST;
     u16 PC;
     u16 SP;
+    u8 mem[0x1000];
+    u8 * display;
+
+    Chip8_State() : DT(0), ST(0), PC(0x200), SP(0xEA0) {
+        this->display = this->mem + 0xF00;
+    }
 };
+
+inline bool ReadProgram(const char * program_path, Chip8_State * c8)
+{
+    FILE * program = fopen(program_path, "rb");
+    if (program == NULL) {
+        printf("Error: File %s doesn't exist\n", program_path);
+        return false;
+    }
+
+    fseek(program, 0, SEEK_END);
+    long program_size = ftell(program);
+    rewind(program);
+
+    fread(c8->mem + c8->PC, 1, (size_t) program_size, program);
+
+    fclose(program);
+    return true;
+}
 
 int main(int argc, const char ** argv)
 {
@@ -28,25 +52,11 @@ int main(int argc, const char ** argv)
     }
 
     // Init CPU and memory
-    Chip8_CPU cpu;
-    cpu.PC = 0x00000200;
-    cpu.DT = 0x0000;
-    cpu.ST = 0x0000;
-    cpu.SP = 0x00000EA0;
-    u8 memory[0x1000];
-    u8 * display = memory + 0xF00;
+    Chip8_State c8;
 
     // Read program from file
-    FILE * program = fopen(argv[1], "rb");
-    if (program == NULL) {
-        printf("Error: File %s doesn't exist\n", argv[1]);
+    if (!ReadProgram(argv[1], &c8))
         return 1;
-    }
-    fseek(program, 0, SEEK_END);
-    long program_size = ftell(program);
-    rewind(program);
-    fread(memory + cpu.PC, 1, program_size, program);
-    fclose(program);
 
     // Open window
     sf::RenderWindow window(sf::VideoMode(640, 320), "Cookies");
@@ -58,8 +68,8 @@ int main(int argc, const char ** argv)
     sf::RectangleShape rectangle(sf::Vector2f(10, 10));
     rectangle.setFillColor(sf::Color(255, 255, 255));
     while (window.isOpen()) {
-        opcode = memory[cpu.PC] << 8 + memory[cpu.PC + 1];
-        cpu.PC += 0x0002;
+        opcode = c8.mem[c8.PC] << 8 + c8.mem[c8.PC + 1];
+        c8.PC += 0x0002;
 
         printf("%.4X\n", opcode);
 
@@ -85,8 +95,8 @@ int main(int argc, const char ** argv)
             The interpreter sets the program counter to the address at the top
             of the stack, then subtracts 1 from the stack pointer. */
             case 0x00EE:
-                cpu.PC = (memory[cpu.SP] << 8) + memory[cpu.SP + 1];
-                cpu.SP -= 2;
+                c8.PC = (c8.mem[c8.SP] << 8) + c8.mem[c8.SP + 1];
+                c8.SP -= 2;
                 break;
             /* 0nnn - SYS addr
             Jump to a machine code routine at nnn.
@@ -101,46 +111,46 @@ int main(int argc, const char ** argv)
         Jump to location nnn.
         The interpreter sets the program counter to nnn. */
         case 0x1000:
-            cpu.PC = opcode & 0x0FFF;
+            c8.PC = opcode & 0x0FFF;
             break;
         /* 2nnn - CALL addr
         Call subroutine at nnn.
         The interpreter increments the stack pointer, then puts the current PC
         on the top of the stack. The PC is then set to nnn. */
         case 0x2000:
-            cpu.SP += 2;
-            memory[cpu.SP] = cpu.PC >> 8;
-            memory[cpu.SP + 1] = cpu.PC;
-            cpu.PC = opcode & 0x0FFF;
+            c8.SP += 2;
+            c8.mem[c8.SP] = c8.PC >> 8;
+            c8.mem[c8.SP + 1] = c8.PC;
+            c8.PC = opcode & 0x0FFF;
             break;
         /* 3xkk - SE Vx, byte
         Skip next instruction if Vx = kk.
         The interpreter compares register Vx to kk, and if they are equal,
         increments the program counter by 2. */
         case 0x3000:
-            if (cpu.V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
-                cpu.PC += 2;
+            if (c8.V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
+                c8.PC += 2;
             break;
         /* 4xkk - SNE Vx, byte
         Skip next instruction if Vx != kk.
         The interpreter compares register Vx to kk, and if they are not equal,
         increments the program counter by 2. */
         case 0x4000:
-            if (cpu.V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
-                cpu.PC += 2;
+            if (c8.V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
+                c8.PC += 2;
             break;
         /* 6xkk - LD Vx, byte
         Set Vx = kk.
         The interpreter puts the value kk into register Vx. */
         case 0x6000:
-            cpu.V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
+            c8.V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
             break;
         /* 7xkk - ADD Vx, byte
         Set Vx = Vx + kk.
         Adds the value kk to the value of register Vx, then stores the
         result in Vx. */
         case 0x7000:
-            cpu.V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
+            c8.V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
             break;
         /* 8___ - ALU or some shit */
         case 0x8000:
@@ -149,7 +159,7 @@ int main(int argc, const char ** argv)
             Set Vx = Vy.
             Stores the value of register Vy in register Vx. */
             case 0x0000:
-                cpu.V[(opcode & 0x0F00) >> 8] = cpu.V[(opcode & 0x00F0) >> 8];
+                c8.V[(opcode & 0x0F00) >> 8] = c8.V[(opcode & 0x00F0) >> 8];
                 break;
             /* 8xy2 - AND Vx, Vy
             Set Vx = Vx AND Vy.
@@ -158,7 +168,7 @@ int main(int argc, const char ** argv)
             from two values, and if both bits are 1, then the same bit in
             the result is also 1. Otherwise, it is 0. */
             case 0x0002:
-                cpu.V[(opcode & 0x0F00) >> 8] &= cpu.V[(opcode & 0x00F0) >> 8];
+                c8.V[(opcode & 0x0F00) >> 8] &= c8.V[(opcode & 0x00F0) >> 8];
                 break;
             /* 8xy4 - ADD Vx, Vy
             Set Vx = Vx + Vy, set VF = carry.
@@ -167,11 +177,11 @@ int main(int argc, const char ** argv)
             Only the lowest 8 bits of the result are kept, and
             stored in Vx. */
             case 0x0004: {
-                u8 x = cpu.V[(opcode & 0x0F00) >> 8];
-                u8 y = cpu.V[(opcode & 0x00F0) >> 8];
+                u8 x = c8.V[(opcode & 0x0F00) >> 8];
+                u8 y = c8.V[(opcode & 0x00F0) >> 8];
                 u8 r = x + y;
-                cpu.V[0xF] = r < x || r < y ? 0x0001 : 0x0000;
-                cpu.V[(opcode & 0x0F00) >> 8] = r;
+                c8.V[0xF] = r < x || r < y ? 0x0001 : 0x0000;
+                c8.V[(opcode & 0x0F00) >> 8] = r;
                 break;
             }
             /* 8xy5 - SUB Vx, Vy
@@ -179,10 +189,10 @@ int main(int argc, const char ** argv)
             If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted
             from Vx, and the results stored in Vx. */
             case 0x0005: {
-                u8 x = cpu.V[(opcode & 0x0F00) >> 8];
-                u8 y = cpu.V[(opcode & 0x00F0) >> 8];
-                cpu.V[0xF] = x > y ? 0x0001 : 0x0000;
-                cpu.V[(opcode & 0x0F00) >> 8] = x - y;
+                u8 x = c8.V[(opcode & 0x0F00) >> 8];
+                u8 y = c8.V[(opcode & 0x00F0) >> 8];
+                c8.V[0xF] = x > y ? 0x0001 : 0x0000;
+                c8.V[(opcode & 0x0F00) >> 8] = x - y;
                 break;
             }
             default:
@@ -194,7 +204,7 @@ int main(int argc, const char ** argv)
         Set I = nnn.
         The value of register I is set to nnn. */
         case 0xA000:
-            cpu.I = opcode & 0x0FFF;
+            c8.I = opcode & 0x0FFF;
             break;
         /* Cxkk - RND Vx, byte
         Set Vx = random byte AND kk.
@@ -206,7 +216,7 @@ int main(int argc, const char ** argv)
             randomst ^= (randomst << 7);
             randomst ^= (randomst >> 5);
             randomst ^= (randomst << 3);
-            cpu.V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF & randomst;
+            c8.V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF & randomst;
             break;
         /* Dxyn - DRW Vx, Vy, nibble
         Display n-byte sprite starting at memory location I at (Vx, Vy),
@@ -224,9 +234,9 @@ int main(int argc, const char ** argv)
             // http://www.emulator101.com/chip-8-sprites.html
             // i'm not sure if it's well implemented and i'm 100% sure it can be optimized
             u8 n = opcode & 0x000F;
-            u16 i = cpu.I;
-            u8 offset = cpu.V[(opcode & 0x0F00) >> 8] +
-                64 * cpu.V[(opcode & 0x00F0) >> 8];
+            u16 i = c8.I;
+            u8 offset = c8.V[(opcode & 0x0F00) >> 8] +
+                64 * c8.V[(opcode & 0x00F0) >> 8];
 
             u8 bitshift;
             while (n > 0) {
@@ -234,14 +244,14 @@ int main(int argc, const char ** argv)
                 while (bitshift > 0) {
                     bitshift--;
 
-                    if (memory[i] & (1 << bitshift)) {
+                    if (c8.mem[i] & (1 << bitshift)) {
                         // Determine the address of the effected byte on the screen
-                        u8 * address = display + offset / 8;
+                        u8 * address = c8.display + offset / 8;
                         // Determine the effected bit in the byte
                         u8 effected_bit = offset % 8;
                         // Check to see if the screen's bit is set and set VF appropriately
                         if (*address & (1 << effected_bit))
-                            cpu.V[0xF] = 1;
+                            c8.V[0xF] = 1;
                         // XOR the source bit and screen bit
                         // Write the effected bit to the screen
                         *address ^= 1 << effected_bit;
@@ -276,19 +286,19 @@ int main(int argc, const char ** argv)
             Set Vx = delay timer value.
             The value of DT is placed into Vx. */
             case 0x0007:
-                cpu.V[(opcode & 0x0F00) >> 8] = cpu.DT;
+                c8.V[(opcode & 0x0F00) >> 8] = c8.DT;
                 break;
             /* Fx15 - LD DT, Vx
             Set delay timer = Vx.
             DT is set equal to the value of Vx. */
             case 0x0015:
-                cpu.DT = cpu.V[(opcode & 0x0F00) >> 8];
+                c8.DT = c8.V[(opcode & 0x0F00) >> 8];
                 break;
             /* Fx18 - LD ST, Vx
             Set sound timer = Vx.
             ST is set equal to the value of Vx. */
             case 0x0018:
-                cpu.ST = cpu.V[(opcode & 0x0F00) >> 8];
+                c8.ST = c8.V[(opcode & 0x0F00) >> 8];
                 break;
             /* Fx29 - LD F, Vx
             Set I = location of sprite for digit Vx.
@@ -304,10 +314,10 @@ int main(int argc, const char ** argv)
             hundreds digit in memory at location in I, the tens digit at
             location I+1, and the ones digit at location I+2. */
             case 0x0033: {
-                u8 x = cpu.V[(opcode & 0x0F00) >> 8];
-                memory[cpu.I] = x / 100;
-                memory[cpu.I + 1] = x / 10 % 10;
-                memory[cpu.I + 2] = x % 10;
+                u8 x = c8.V[(opcode & 0x0F00) >> 8];
+                c8.mem[c8.I] = x / 100;
+                c8.mem[c8.I + 1] = x / 10 % 10;
+                c8.mem[c8.I + 2] = x % 10;
                 break;
             }
             /* Fx65 - LD Vx, [I]
@@ -315,9 +325,9 @@ int main(int argc, const char ** argv)
             The interpreter reads values from memory starting at location I into
             registers V0 through Vx. */
             case 0x0065: {
-                u8 x = cpu.V[(opcode & 0x0F00) >> 8];
+                u8 x = c8.V[(opcode & 0x0F00) >> 8];
                 for (int i = 0; i <= x; i++)
-                    cpu.V[i] = memory[cpu.I + i];
+                    c8.V[i] = c8.mem[c8.I + i];
                 break;
             }
             default:
@@ -334,7 +344,7 @@ int main(int argc, const char ** argv)
         int z = 0;
         for (int j = 0; j < 320; j += 10) {
             for (int i = 0; i < 640; i += 10) {
-                u8 displaybyte = display[z];
+                u8 displaybyte = c8.display[z];
 
                 if (displaybyte & 0b10000000) {
                     rectangle.setPosition(i, j);
