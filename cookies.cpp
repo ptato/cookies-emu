@@ -22,6 +22,8 @@ struct Chip8_State
 
     Chip8_State() : DT(0), ST(0), PC(0x200), SP(0xEA0) {
         this->display = this->mem + 0xF00;
+        for (int i = 0; i < 256; i++)
+            this->display[i] = 0;
     }
 };
 
@@ -88,7 +90,8 @@ int main(int argc, const char ** argv)
             /* 00E0 - CLS
             Clear the display. */
             case 0x00E0:
-//                printf("Unimplemented: CLEAR DISPLAY\n");
+                for (int i = 0; i < 256; i++)
+                    c8.display[i] = 0;
                 break;
             /* 00EE - RET
             Return from a subroutine.
