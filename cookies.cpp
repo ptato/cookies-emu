@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cstdio>
 
+#include <SFML/Graphics.hpp>
+
 using u8 = uint8_t;
 using u16 = uint16_t;
 
@@ -46,13 +48,28 @@ int main(int argc, const char ** argv)
     fread(memory + cpu.PC, 1, program_size, program);
     fclose(program);
 
+    // Open window
+    sf::RenderWindow window(sf::VideoMode(640, 320), "Cookies");
+
     u8 randomst = 1;
     u16 opcode;
-    while (true) {
+    sf::Event event;
+
+    sf::RectangleShape rectangle(sf::Vector2f(10, 10));
+    rectangle.setFillColor(sf::Color(255, 255, 255));
+    while (window.isOpen()) {
         opcode = memory[cpu.PC] << 8 + memory[cpu.PC + 1];
         cpu.PC += 0x0002;
 
+        printf("%.4X\n", opcode);
+
         // @Todo: timers...
+
+        // Process events
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
 
         switch (opcode & 0xF000) {
         /* 0___ - ??? */
@@ -61,7 +78,7 @@ int main(int argc, const char ** argv)
             /* 00E0 - CLS
             Clear the display. */
             case 0x00E0:
-                printf("Unimplemented: CLEAR DISPLAY\n");
+//                printf("Unimplemented: CLEAR DISPLAY\n");
                 break;
             /* 00EE - RET
             Return from a subroutine.
@@ -76,7 +93,7 @@ int main(int argc, const char ** argv)
             This instruction is only used on the old computers on which Chip-8
             was originally implemented. It is ignored by modern interpreters. */
             default:
-                printf("Found SYS opcode: %.4X\n", opcode);
+//                printf("Found SYS opcode: %.4X\n", opcode);
                 break;
             }
             break;
@@ -312,6 +329,57 @@ int main(int argc, const char ** argv)
             printf("Error: unimplemented instruction: %.4X\n", opcode);
             break;
         }
+
+        // Update screen
+        int z = 0;
+        for (int j = 0; j < 320; j += 10) {
+            for (int i = 0; i < 640; i += 10) {
+                u8 displaybyte = display[z];
+
+                if (displaybyte & 0b10000000) {
+                    rectangle.setPosition(i, j);
+                    window.draw(rectangle);
+                }
+                i += 10;
+                if (displaybyte & 0b01000000) {
+                    rectangle.setPosition(i, j);
+                    window.draw(rectangle);
+                }
+                i += 10;
+                if (displaybyte & 0b00100000) {
+                    rectangle.setPosition(i, j);
+                    window.draw(rectangle);
+                }
+                i += 10;
+                if (displaybyte & 0b00010000) {
+                    rectangle.setPosition(i, j);
+                    window.draw(rectangle);
+                }
+                i += 10;
+                if (displaybyte & 0b00001000) {
+                    rectangle.setPosition(i, j);
+                    window.draw(rectangle);
+                }
+                i += 10;
+                if (displaybyte & 0b00000100) {
+                    rectangle.setPosition(i, j);
+                    window.draw(rectangle);
+                }
+                i += 10;
+                if (displaybyte & 0b00000010) {
+                    rectangle.setPosition(i, j);
+                    window.draw(rectangle);
+                }
+                i += 10;
+                if (displaybyte & 0b00000001) {
+                    rectangle.setPosition(i, j);
+                    window.draw(rectangle);
+                }
+
+                z++;
+            }
+        }
+        window.display();
 
         // @Todo: timers, display...
     }

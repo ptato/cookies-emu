@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.6)
+set(CMAKE_CXX_COMPILER "g++")
+project(Cookies CXX)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "C:/MinGW/cmake/Modules")
+
+add_executable(Cookies cookies.cpp)
+
+find_package(SFML 2.4 COMPONENTS audio graphics window system)
+if (SFML_FOUND)
+    include_directories(${SFML_INCLUDE_DIR})
+    target_link_libraries(Cookies ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
+    message(STATUS "Success! Loaded SFML")
+    message(STATUS "SFML Headers Path: ${SFML_INCLUDE_DIR}")
+    message(STATUS "SFML Libraries Path: ${SFML_LIBRARIES}")
+    message(STATUS "SFML Dependencies Path: ${SFML_DEPENDENCIES}")
+else()
+    message(FATAL_ERROR "Error! Can't find SFML")
+endif()
