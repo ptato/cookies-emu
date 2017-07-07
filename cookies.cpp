@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <ctime>
 
 #include <SFML/Graphics.hpp>
@@ -11,7 +12,8 @@
 using u8 = uint8_t;
 using u16 = uint16_t;
 
-static const sf::Keyboard::Key keys[16] {
+static const sf::Keyboard::Key keys[16]
+{
         sf::Keyboard::Key::Numpad0,
         sf::Keyboard::Key::Numpad1,
         sf::Keyboard::Key::Numpad2,
@@ -28,6 +30,121 @@ static const sf::Keyboard::Key keys[16] {
         sf::Keyboard::Key::D,
         sf::Keyboard::Key::E,
         sf::Keyboard::Key::F
+};
+
+static const u8 sprites[80]
+{
+        // 0
+        0b11110000,
+        0b10010000,
+        0b10010000,
+        0b10010000,
+        0b11110000,
+
+        // 1
+        0b00100000,
+        0b01100000,
+        0b00100000,
+        0b00100000,
+        0b01110000,
+
+        // 2
+        0b11110000,
+        0b00010000,
+        0b11110000,
+        0b10000000,
+        0b11110000,
+
+        // 3
+        0b11110000,
+        0b00010000,
+        0b11110000,
+        0b00010000,
+        0b11110000,
+
+        // 4
+        0b10010000,
+        0b10010000,
+        0b11110000,
+        0b00010000,
+        0b00010000,
+
+        // 5
+        0b11110000,
+        0b10000000,
+        0b11110000,
+        0b00010000,
+        0b11110000,
+
+        // 6
+        0b11110000,
+        0b10000000,
+        0b11110000,
+        0b10010000,
+        0b11110000,
+
+        // 7
+        0b11110000,
+        0b00010000,
+        0b00100000,
+        0b01000000,
+        0b01000000,
+
+        // 8
+        0b11110000,
+        0b10010000,
+        0b11110000,
+        0b10010000,
+        0b11110000,
+
+        // 9
+        0b11110000,
+        0b10010000,
+        0b11110000,
+        0b00010000,
+        0b11110000,
+
+        // A
+        0b11110000,
+        0b10010000,
+        0b11110000,
+        0b10010000,
+        0b10010000,
+
+        // B
+        0b11100000,
+        0b10010000,
+        0b11100000,
+        0b10010000,
+        0b11100000,
+
+        // C
+        0b11110000,
+        0b10000000,
+        0b10000000,
+        0b10000000,
+        0b11110000,
+
+        // D
+        0b11100000,
+        0b10010000,
+        0b10010000,
+        0b10010000,
+        0b11100000,
+
+        // E
+        0b11110000,
+        0b10000000,
+        0b11110000,
+        0b10000000,
+        0b11110000,
+
+        // F
+        0b11110000,
+        0b10000000,
+        0b11110000,
+        0b10000000,
+        0b10000000
 };
 
 struct Chip8_State
@@ -76,6 +193,9 @@ int main(int argc, const char ** argv)
 
     // Init CPU and memory
     Chip8_State c8;
+
+    // Load font to memory
+    memcpy(c8.mem, sprites, 80);
 
     // Read program from file
     if (!ReadProgram(argv[1], &c8))
@@ -331,8 +451,7 @@ int main(int argc, const char ** argv)
             corresponding to the value of Vx. See section 2.4, Display, for more
             information on the Chip-8 hexadecimal font. */
             case 0x0029:
-                // @Todo: PONG
-                c8.I = 0x2EA;
+                c8.I = (u16) (c8.V[(opcode & 0x0F00) >> 8] * 5);
                 break;
             /* Fx33 - LD B, Vx
             Store BCD representation of Vx in memory locations I, I+1, and I+2.
