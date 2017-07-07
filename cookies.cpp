@@ -396,7 +396,7 @@ int main(int argc, const char ** argv)
         window.display();
 
         new_time = time(NULL);
-        interval -= (new_time - new_time);
+        interval -= (new_time - previous_time);
         previous_time = new_time;
         if (interval <= 0) {
             interval += 17;
