@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <ctime>
 
 #include <SFML/Graphics.hpp>
 
@@ -60,14 +61,14 @@ int main(int argc, const char ** argv)
     if (!ReadProgram(argv[1], &c8))
         return 1;
 
-    u16 xDD = c8.mem[c8.PC] << 8 | c8.mem[c8.PC + 1];
-    printf("%.4X\n", xDD);
-
     // Open window
     sf::RenderWindow window(sf::VideoMode(640, 320), "Cookies");
 
     u8 randomst = 1;
     u16 opcode;
+    time_t previous_time, new_time;
+    previous_time = time(NULL);
+    int interval = 17;
     sf::Event event;
 
     sf::RectangleShape rectangle(sf::Vector2f(10, 10));
@@ -75,8 +76,6 @@ int main(int argc, const char ** argv)
     while (window.isOpen()) {
         opcode = c8.mem[c8.PC] << 8 | c8.mem[c8.PC + 1];
         c8.PC += 0x0002;
-
-//        printf("%.4X\n", opcode);
 
         // @Todo: timers...
 
@@ -396,7 +395,16 @@ int main(int argc, const char ** argv)
         }
         window.display();
 
-        // @Todo: timers, display...
+        new_time = time(NULL);
+        interval -= (new_time - new_time);
+        previous_time = new_time;
+        if (interval <= 0) {
+            interval += 17;
+            if (c8.DT > 0)
+                c8.DT -= 1;
+            if (c8.ST > 0)
+                c8.ST -= 1;
+        }
     }
 
     // Cleanup?
