@@ -311,6 +311,7 @@ int main(int argc, const char ** argv)
             information on the Chip-8 hexadecimal font. */
             case 0x0029:
                 // @Todo: PONG
+                c8.I = 0x2EA;
                 break;
             /* Fx33 - LD B, Vx
             Store BCD representation of Vx in memory locations I, I+1, and I+2.
