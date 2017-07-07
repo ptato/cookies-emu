@@ -6,9 +6,29 @@
 #include <ctime>
 
 #include <SFML/Graphics.hpp>
+#include <SFML/Window/Keyboard.hpp>
 
 using u8 = uint8_t;
 using u16 = uint16_t;
+
+static const sf::Keyboard::Key keys[16] {
+        sf::Keyboard::Key::Numpad0,
+        sf::Keyboard::Key::Numpad1,
+        sf::Keyboard::Key::Numpad2,
+        sf::Keyboard::Key::Numpad3,
+        sf::Keyboard::Key::Numpad4,
+        sf::Keyboard::Key::Numpad5,
+        sf::Keyboard::Key::Numpad6,
+        sf::Keyboard::Key::Numpad7,
+        sf::Keyboard::Key::Numpad8,
+        sf::Keyboard::Key::Numpad9,
+        sf::Keyboard::Key::A,
+        sf::Keyboard::Key::B,
+        sf::Keyboard::Key::C,
+        sf::Keyboard::Key::D,
+        sf::Keyboard::Key::E,
+        sf::Keyboard::Key::F
+};
 
 struct Chip8_State
 {
@@ -276,7 +296,8 @@ int main(int argc, const char ** argv)
             Checks the keyboard, and if the key corresponding to the value
             of Vx is currently in the up position, PC is increased by 2. */
             case 0x00A1:
-                // @Todo: PONG
+                if (!sf::Keyboard::isKeyPressed(keys[(opcode & 0x0F00) >> 8]))
+                    c8.PC += 2;
                 break;
             default:
                 printf("Error: unimplemented keyboard op: %.4X\n", opcode);
