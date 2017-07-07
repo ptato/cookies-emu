@@ -60,6 +60,9 @@ int main(int argc, const char ** argv)
     if (!ReadProgram(argv[1], &c8))
         return 1;
 
+    u16 xDD = c8.mem[c8.PC] << 8 | c8.mem[c8.PC + 1];
+    printf("%.4X\n", xDD);
+
     // Open window
     sf::RenderWindow window(sf::VideoMode(640, 320), "Cookies");
 
@@ -70,10 +73,10 @@ int main(int argc, const char ** argv)
     sf::RectangleShape rectangle(sf::Vector2f(10, 10));
     rectangle.setFillColor(sf::Color(255, 255, 255));
     while (window.isOpen()) {
-        opcode = c8.mem[c8.PC] << 8 + c8.mem[c8.PC + 1];
+        opcode = c8.mem[c8.PC] << 8 | c8.mem[c8.PC + 1];
         c8.PC += 0x0002;
 
-        printf("%.4X\n", opcode);
+//        printf("%.4X\n", opcode);
 
         // @Todo: timers...
 
@@ -114,7 +117,7 @@ int main(int argc, const char ** argv)
         Jump to location nnn.
         The interpreter sets the program counter to nnn. */
         case 0x1000:
-            c8.PC = opcode & 0x0FFF;
+            c8.PC = (u16) (opcode & 0x0FFF);
             break;
         /* 2nnn - CALL addr
         Call subroutine at nnn.
@@ -122,9 +125,9 @@ int main(int argc, const char ** argv)
         on the top of the stack. The PC is then set to nnn. */
         case 0x2000:
             c8.SP += 2;
-            c8.mem[c8.SP] = c8.PC >> 8;
-            c8.mem[c8.SP + 1] = c8.PC;
-            c8.PC = opcode & 0x0FFF;
+            c8.mem[c8.SP] = (u8) (c8.PC >> 8);
+            c8.mem[c8.SP + 1] = (u8) c8.PC;
+            c8.PC = (u16) (opcode & 0x0FFF);
             break;
         /* 3xkk - SE Vx, byte
         Skip next instruction if Vx = kk.
@@ -146,7 +149,7 @@ int main(int argc, const char ** argv)
         Set Vx = kk.
         The interpreter puts the value kk into register Vx. */
         case 0x6000:
-            c8.V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
+            c8.V[(opcode & 0x0F00) >> 8] = (u8) (opcode & 0x00FF);
             break;
         /* 7xkk - ADD Vx, byte
         Set Vx = Vx + kk.
@@ -183,7 +186,7 @@ int main(int argc, const char ** argv)
                 u8 x = c8.V[(opcode & 0x0F00) >> 8];
                 u8 y = c8.V[(opcode & 0x00F0) >> 8];
                 u8 r = x + y;
-                c8.V[0xF] = r < x || r < y ? 0x0001 : 0x0000;
+                c8.V[0xF] = (u8) (r < x || r < y ? 0x0001 : 0x0000);
                 c8.V[(opcode & 0x0F00) >> 8] = r;
                 break;
             }
@@ -194,7 +197,7 @@ int main(int argc, const char ** argv)
             case 0x0005: {
                 u8 x = c8.V[(opcode & 0x0F00) >> 8];
                 u8 y = c8.V[(opcode & 0x00F0) >> 8];
-                c8.V[0xF] = x > y ? 0x0001 : 0x0000;
+                c8.V[0xF] = (u8) (x > y ? 0x0001 : 0x0000);
                 c8.V[(opcode & 0x0F00) >> 8] = x - y;
                 break;
             }
@@ -207,7 +210,7 @@ int main(int argc, const char ** argv)
         Set I = nnn.
         The value of register I is set to nnn. */
         case 0xA000:
-            c8.I = opcode & 0x0FFF;
+            c8.I = (u16) (opcode & 0x0FFF);
             break;
         /* Cxkk - RND Vx, byte
         Set Vx = random byte AND kk.
@@ -219,7 +222,7 @@ int main(int argc, const char ** argv)
             randomst ^= (randomst << 7);
             randomst ^= (randomst >> 5);
             randomst ^= (randomst << 3);
-            c8.V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF & randomst;
+            c8.V[(opcode & 0x0F00) >> 8] = (u8) (opcode & 0x00FF & randomst);
             break;
         /* Dxyn - DRW Vx, Vy, nibble
         Display n-byte sprite starting at memory location I at (Vx, Vy),
@@ -236,10 +239,9 @@ int main(int argc, const char ** argv)
         case 0xD000: {
             // http://www.emulator101.com/chip-8-sprites.html
             // i'm not sure if it's well implemented and i'm 100% sure it can be optimized
-            u8 n = opcode & 0x000F;
+            u8 n = (u8) (opcode & 0x000F);
             u16 i = c8.I;
-            u8 offset = c8.V[(opcode & 0x0F00) >> 8] +
-                64 * c8.V[(opcode & 0x00F0) >> 8];
+            u8 offset = (u8) (c8.V[(opcode & 0x0F00) >> 8] + 64 * c8.V[(opcode & 0x00F0) >> 8]);
 
             u8 bitshift;
             while (n > 0) {
@@ -251,7 +253,7 @@ int main(int argc, const char ** argv)
                         // Determine the address of the effected byte on the screen
                         u8 * address = c8.display + offset / 8;
                         // Determine the effected bit in the byte
-                        u8 effected_bit = offset % 8;
+                        u8 effected_bit = (u8) (offset % 8);
                         // Check to see if the screen's bit is set and set VF appropriately
                         if (*address & (1 << effected_bit))
                             c8.V[0xF] = 1;
@@ -318,9 +320,9 @@ int main(int argc, const char ** argv)
             location I+1, and the ones digit at location I+2. */
             case 0x0033: {
                 u8 x = c8.V[(opcode & 0x0F00) >> 8];
-                c8.mem[c8.I] = x / 100;
-                c8.mem[c8.I + 1] = x / 10 % 10;
-                c8.mem[c8.I + 2] = x % 10;
+                c8.mem[c8.I] = (u8) (x / 100);
+                c8.mem[c8.I + 1] = (u8) (x / 10 % 10);
+                c8.mem[c8.I + 2] = (u8) (x % 10);
                 break;
             }
             /* Fx65 - LD Vx, [I]
