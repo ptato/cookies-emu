@@ -471,6 +471,7 @@ int main(int argc, const char ** argv)
             registers V0 through Vx. */
             case 0x0065: {
                 u8 x = c8.V[(opcode & 0x0F00) >> 8];
+                x = (u8) (x < 16 ? x : 15);
                 for (int i = 0; i <= x; i++)
                     c8.V[i] = c8.mem[c8.I + i];
                 break;
