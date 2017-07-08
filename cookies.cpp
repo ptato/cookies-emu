@@ -376,35 +376,21 @@ int main(int argc, const char ** argv)
         section 2.4, Display, for more information on the Chip-8 screen and
         sprites. */
         case 0xD000: {
-            // http://www.emulator101.com/chip-8-sprites.html
-            // i'm not sure if it's well implemented and i'm 100% sure it can be optimized
             u8 n = (u8) (opcode & 0x000F);
-            u16 i = c8.I;
-            u8 offset = (u8) (c8.V[(opcode & 0x0F00) >> 8] + 64 * c8.V[(opcode & 0x00F0) >> 8]);
-
-            u8 bitshift;
-            while (n > 0) {
-                bitshift = 8;
-                while (bitshift > 0) {
-                    bitshift--;
-
-                    if (c8.mem[i] & (1 << bitshift)) {
-                        // Determine the address of the effected byte on the screen
-                        u8 * address = c8.display + offset / 8;
-                        // Determine the effected bit in the byte
-                        u8 effected_bit = (u8) (offset % 8);
-                        // Check to see if the screen's bit is set and set VF appropriately
-                        if (*address & (1 << effected_bit))
-                            c8.V[0xF] = 1;
-                        // XOR the source bit and screen bit
-                        // Write the effected bit to the screen
-                        *address ^= 1 << effected_bit;
-                    }
-                    offset++;
+            u8 x = c8.V[(opcode & 0x0F00) >> 8];
+            u8 y = c8.V[(opcode & 0x00F0) >> 8];
+            u8 display_byte = (u8) (y * 8 + x / 8);
+            u8 offset = (u8) (x % 8);
+            for (int i = 0; i < n; i++) {
+                if (offset != 0) {
+                    // Todo: set VF
+                    c8.display[display_byte] ^= (c8.mem[c8.I + i] >> offset);
+                    c8.display[display_byte + 1] ^= (c8.mem[c8.I + i] << (8 - offset));
+                } else {
+                    // Todo: set VF
+                    c8.display[display_byte] ^= c8.mem[c8.I + i];
                 }
-                offset += 56;
-                i++;
-                n--;
+                display_byte += 8;
             }
             break;
         }
