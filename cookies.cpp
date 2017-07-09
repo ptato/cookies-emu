@@ -395,6 +395,14 @@ int main(int argc, const char ** argv)
                 break;
             }
             break;
+        /* 9xy0 - SNE Vx, Vy
+        Skip next instruction if Vx != Vy.
+        The values of Vx and Vy are compared, and if they are not
+        equal, the program counter is increased by 2. */
+        case 0x9000:
+            if (c8.V[(opcode & 0x0F00) >> 8] != c8.V[(opcode & 0x0FF0) >> 4])
+                c8.PC += 2;
+            break;
         /* Annn - LD I, addr
         Set I = nnn.
         The value of register I is set to nnn. */
