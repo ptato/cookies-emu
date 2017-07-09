@@ -310,6 +310,15 @@ int main(int argc, const char ** argv)
             case 0x0000:
                 c8.V[(opcode & 0x0F00) >> 8] = c8.V[(opcode & 0x00F0) >> 4];
                 break;
+            /* 8xy1 - OR Vx, Vy
+            Set Vx = Vx OR Vy.
+            Performs a bitwise OR on the values of Vx and Vy, then stores the
+            result in Vx. A bitwise OR compares the corrseponding bits from
+            two values, and if either bit is 1, then the same bit in the result
+            is also 1. Otherwise, it is 0. */
+            case 0x0001:
+                c8.V[(opcode & 0x0F00) >> 8] |= c8.V[(opcode & 0x00F0) >> 4];
+                break;
             /* 8xy2 - AND Vx, Vy
             Set Vx = Vx AND Vy.
             Performs a bitwise AND on the values of Vx and Vy, then stores
@@ -318,6 +327,15 @@ int main(int argc, const char ** argv)
             the result is also 1. Otherwise, it is 0. */
             case 0x0002:
                 c8.V[(opcode & 0x0F00) >> 8] &= c8.V[(opcode & 0x00F0) >> 4];
+                break;
+            /* 8xy3 - XOR Vx, Vy
+            Set Vx = Vx XOR Vy.
+            Performs a bitwise exclusive OR on the values of Vx and Vy, then
+            stores the result in Vx. An exclusive OR compares the corrseponding
+            bits from two values, and if the bits are not both the same, then
+            the corresponding bit in the result is set to 1. Otherwise, it is 0. */
+            case 0x0003:
+                c8.V[(opcode & 0x0F00) >> 8] ^= c8.V[(opcode & 0x00F0) >> 4];
                 break;
             /* 8xy4 - ADD Vx, Vy
             Set Vx = Vx + Vy, set VF = carry.
