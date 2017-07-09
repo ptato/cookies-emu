@@ -283,6 +283,14 @@ int main(int argc, const char ** argv)
             if (c8.V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
                 c8.PC += 2;
             break;
+        /* 5xy0 - SE Vx, Vy
+        Skip next instruction if Vx = Vy.
+        The interpreter compares register Vx to register Vy, and if they are
+        equal, increments the program counter by 2. */
+        case 0x5000:
+            if (c8.V[(opcode & 0x0F00) >> 8] == c8.V[(opcode & 0x0FF0) >> 4])
+                c8.PC += 2;
+            break;
         /* 6xkk - LD Vx, byte
         Set Vx = kk.
         The interpreter puts the value kk into register Vx. */
