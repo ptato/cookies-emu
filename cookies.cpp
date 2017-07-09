@@ -304,7 +304,7 @@ int main(int argc, const char ** argv)
             Set Vx = Vy.
             Stores the value of register Vy in register Vx. */
             case 0x0000:
-                c8.V[(opcode & 0x0F00) >> 8] = c8.V[(opcode & 0x00F0) >> 8];
+                c8.V[(opcode & 0x0F00) >> 8] = c8.V[(opcode & 0x00F0) >> 4];
                 break;
             /* 8xy2 - AND Vx, Vy
             Set Vx = Vx AND Vy.
@@ -313,7 +313,7 @@ int main(int argc, const char ** argv)
             from two values, and if both bits are 1, then the same bit in
             the result is also 1. Otherwise, it is 0. */
             case 0x0002:
-                c8.V[(opcode & 0x0F00) >> 8] &= c8.V[(opcode & 0x00F0) >> 8];
+                c8.V[(opcode & 0x0F00) >> 8] &= c8.V[(opcode & 0x00F0) >> 4];
                 break;
             /* 8xy4 - ADD Vx, Vy
             Set Vx = Vx + Vy, set VF = carry.
@@ -323,7 +323,7 @@ int main(int argc, const char ** argv)
             stored in Vx. */
             case 0x0004: {
                 u8 x = c8.V[(opcode & 0x0F00) >> 8];
-                u8 y = c8.V[(opcode & 0x00F0) >> 8];
+                u8 y = c8.V[(opcode & 0x00F0) >> 4];
                 u8 r = x + y;
                 c8.V[0xF] = (u8) (r < x || r < y ? 0x0001 : 0x0000);
                 c8.V[(opcode & 0x0F00) >> 8] = r;
@@ -335,7 +335,7 @@ int main(int argc, const char ** argv)
             from Vx, and the results stored in Vx. */
             case 0x0005: {
                 u8 x = c8.V[(opcode & 0x0F00) >> 8];
-                u8 y = c8.V[(opcode & 0x00F0) >> 8];
+                u8 y = c8.V[(opcode & 0x00F0) >> 4];
                 c8.V[0xF] = (u8) (x > y ? 0x0001 : 0x0000);
                 c8.V[(opcode & 0x0F00) >> 8] = x - y;
                 break;
@@ -378,8 +378,8 @@ int main(int argc, const char ** argv)
         case 0xD000: {
             u8 n = (u8) (opcode & 0x000F);
             u8 x = c8.V[(opcode & 0x0F00) >> 8];
-            u8 y = c8.V[(opcode & 0x00F0) >> 8];
-            u8 display_byte = (u8) (y * 8 + x / 8);
+            u8 y = c8.V[(opcode & 0x00F0) >> 4];
+            u8 display_byte = (u8) ((y * 64 + x) >> 3);
             u8 offset = (u8) (x % 8);
             for (int i = 0; i < n; i++) {
                 if (offset != 0) {
