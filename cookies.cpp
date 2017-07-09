@@ -216,8 +216,6 @@ int main(int argc, const char ** argv)
         opcode = c8.mem[c8.PC] << 8 | c8.mem[c8.PC + 1];
         c8.PC += 0x0002;
 
-        // @Todo: timers...
-
         // Process events
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
@@ -247,7 +245,6 @@ int main(int argc, const char ** argv)
             This instruction is only used on the old computers on which Chip-8
             was originally implemented. It is ignored by modern interpreters. */
             default:
-//                printf("Found SYS opcode: %.4X\n", opcode);
                 break;
             }
             break;
