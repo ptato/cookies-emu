@@ -11,24 +11,28 @@
 using u8 = uint8_t;
 using u16 = uint16_t;
 
+// 1 2 3 C      1 2 3 4
+// 4 5 6 D      Q W E R
+// 7 8 9 E = >  A S D F
+// A 0 B F      Z X C V
 static const sf::Keyboard::Key keys[16]
 {
-        sf::Keyboard::Numpad0,
-        sf::Keyboard::Numpad1,
-        sf::Keyboard::Numpad2,
-        sf::Keyboard::Numpad3,
-        sf::Keyboard::Numpad4,
-        sf::Keyboard::Numpad5,
-        sf::Keyboard::Numpad6,
-        sf::Keyboard::Numpad7,
-        sf::Keyboard::Numpad8,
-        sf::Keyboard::Numpad9,
-        sf::Keyboard::A,
-        sf::Keyboard::B,
-        sf::Keyboard::C,
-        sf::Keyboard::D,
+        sf::Keyboard::X,
+        sf::Keyboard::Num1,
+        sf::Keyboard::Num2,
+        sf::Keyboard::Num3,
+        sf::Keyboard::Q,
+        sf::Keyboard::W,
         sf::Keyboard::E,
-        sf::Keyboard::F
+        sf::Keyboard::A,
+        sf::Keyboard::S,
+        sf::Keyboard::D,
+        sf::Keyboard::Z,
+        sf::Keyboard::C,
+        sf::Keyboard::Num4,
+        sf::Keyboard::R,
+        sf::Keyboard::F,
+        sf::Keyboard::V
 };
 
 static const u8 sprites[80]
