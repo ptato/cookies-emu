@@ -381,13 +381,18 @@ int main(int argc, const char ** argv)
             u8 y = c8.V[(opcode & 0x00F0) >> 4];
             u8 display_byte = (u8) ((y * 64 + x) >> 3);
             u8 offset = (u8) (x % 8);
+            c8.V[0xF] = 0;
             for (int i = 0; i < n; i++) {
                 if (offset != 0) {
-                    // Todo: set VF
+                    if (c8.display[display_byte] & (c8.mem[c8.I + i] >> offset))
+                        c8.V[0xF] = 1;
                     c8.display[display_byte] ^= (c8.mem[c8.I + i] >> offset);
+                    if (c8.display[display_byte + 1] & (c8.mem[c8.I + i] << (8 - offset)))
+                        c8.V[0xF] = 1;
                     c8.display[display_byte + 1] ^= (c8.mem[c8.I + i] << (8 - offset));
                 } else {
-                    // Todo: set VF
+                    if (c8.display[display_byte] & c8.mem[c8.I + i])
+                        c8.V[0xF] = 1;
                     c8.display[display_byte] ^= c8.mem[c8.I + i];
                 }
                 display_byte += 8;
