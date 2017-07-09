@@ -5,8 +5,9 @@
 #include <cstdio>
 #include <cstring>
 
-#include <SFML/Graphics.hpp>
-#include <SFML/Window/Keyboard.hpp>
+#include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Window/Event.hpp>
 
 using u8 = uint8_t;
 using u16 = uint16_t;
