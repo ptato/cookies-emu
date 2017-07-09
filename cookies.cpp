@@ -495,6 +495,13 @@ int main(int argc, const char ** argv)
             case 0x0007:
                 c8.V[(opcode & 0x0F00) >> 8] = c8.DT;
                 break;
+            /* Fx0A - LD Vx, K
+            Wait for a key press, store the value of the key in Vx.
+            All execution stops until a key is pressed, then the
+            value of that key is stored in Vx. */
+            case 0x000A:
+                printf("Unimplemented instruction Fx0A\n"); // Todo
+                break;
             /* Fx15 - LD DT, Vx
             Set delay timer = Vx.
             DT is set equal to the value of Vx. */
@@ -506,6 +513,12 @@ int main(int argc, const char ** argv)
             ST is set equal to the value of Vx. */
             case 0x0018:
                 c8.ST = c8.V[(opcode & 0x0F00) >> 8];
+                break;
+            /* Fx1E - ADD I, Vx
+            Set I = I + Vx.
+            The values of I and Vx are added, and the results are stored in I. */
+            case 0x001E:
+                c8.I += c8.V[(opcode & 0x0F00) >> 8];
                 break;
             /* Fx29 - LD F, Vx
             Set I = location of sprite for digit Vx.
@@ -527,6 +540,13 @@ int main(int argc, const char ** argv)
                 c8.mem[c8.I + 2] = (u8) (x % 10);
                 break;
             }
+            /* Fx55 - LD [I], Vx
+            Store registers V0 through Vx in memory starting at location I.
+            The interpreter copies the values of registers V0 through Vx into
+            memory, starting at the address in I. */
+            case 0x0055:
+                printf("Unimplemented instruction Fx55\n");
+                break;
             /* Fx65 - LD Vx, [I]
             Read registers V0 through Vx from memory starting at location I.
             The interpreter reads values from memory starting at location I into
@@ -539,12 +559,11 @@ int main(int argc, const char ** argv)
                 break;
             }
             default:
-                printf("Error: unimplemented FXXX function: %.4X\n", opcode);
                 break;
             }
             break;
         default:
-            printf("Error: unimplemented instruction: %.4X\n", opcode);
+            printf("Unknown instruction %.4X\n", opcode);
             break;
         }
 
