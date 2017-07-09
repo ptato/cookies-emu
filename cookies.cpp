@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <ctime>
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Keyboard.hpp>
@@ -206,9 +205,9 @@ int main(int argc, const char ** argv)
 
     u8 randomst = 1;
     u16 opcode;
-    time_t previous_time, new_time;
-    previous_time = time(NULL);
-    int interval = 17;
+    sf::Clock current_time;
+    int previous_time = current_time.getElapsedTime().asMilliseconds();
+    int period = 17;
     sf::Event event;
 
     sf::RectangleShape rectangle(sf::Vector2f(10, 10));
@@ -528,11 +527,11 @@ int main(int argc, const char ** argv)
         }
         window.display();
 
-        new_time = time(NULL);
-        interval -= (new_time - previous_time);
+        int new_time = current_time.getElapsedTime().asMilliseconds();
+        period -= (new_time - previous_time);
         previous_time = new_time;
-        if (interval <= 0) {
-            interval += 17;
+        while (period <= 0) {
+            period += 17;
             if (c8.DT > 0)
                 c8.DT -= 1;
             if (c8.ST > 0)
