@@ -499,9 +499,29 @@ int main(int argc, const char ** argv)
             Wait for a key press, store the value of the key in Vx.
             All execution stops until a key is pressed, then the
             value of that key is stored in Vx. */
-            case 0x000A:
-                printf("Unimplemented instruction Fx0A\n"); // Todo
+            case 0x000A: {
+                bool pressed = false;
+                while (!pressed) {
+                    window.pollEvent(event);
+                    switch (event.type) {
+                        case sf::Event::Closed:
+                            window.close();
+                            break;
+                        case sf::Event::KeyPressed:
+                            for (int i = 0; i < 16; i++) {
+                                if (event.key.code == keys[i]) {
+                                    pressed = true;
+                                    c8.V[(opcode & 0x0F00) >> 8] = (u8) i;
+                                    break;
+                                }
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
                 break;
+            }
             /* Fx15 - LD DT, Vx
             Set delay timer = Vx.
             DT is set equal to the value of Vx. */
