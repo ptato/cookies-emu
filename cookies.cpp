@@ -362,8 +362,36 @@ int main(int argc, const char ** argv)
                 c8.V[(opcode & 0x0F00) >> 8] = x - y;
                 break;
             }
+            /* 8xy6 - SHR Vx {, Vy}
+            Set Vx = Vx SHR 1.
+            If the least-significant bit of Vx is 1, then VF is set to 1,
+            otherwise 0. Then Vx is divided by 2. */
+            case 0x0006:
+                if (c8.V[(opcode & 0x0F00) >> 8] & 0x01)
+                    c8.V[0xF] = 1;
+                c8.V[(opcode & 0x0F00) >> 8] >>= 1;
+                break;
+            /* 8xy7 - SUBN Vx, Vy
+            Set Vx = Vy - Vx, set VF = NOT borrow.
+            If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is
+            subtracted from Vy, and the results stored in Vx. */
+            case 0x0007: {
+                u8 x = c8.V[(opcode & 0x0F00) >> 8];
+                u8 y = c8.V[(opcode & 0x00F0) >> 4];
+                c8.V[0xF] = (u8) (y > x ? 0x0001 : 0x0000);
+                c8.V[(opcode & 0x0F00) >> 8] = y - x;
+                break;
+            }
+            /* 8xyE - SHL Vx {, Vy}
+            Set Vx = Vx SHL 1.
+            If the most-significant bit of Vx is 1, then VF is set to 1,
+            otherwise to 0. Then Vx is multiplied by 2. */
+            case 0x000E:
+                if (c8.V[(opcode & 0x0F00) >> 8] & 0x80)
+                    c8.V[0xF] = 1;
+                c8.V[(opcode & 0x0F00) >> 8] <<= 1;
+                break;
             default:
-                printf("Error: unimplemented ALU op: %.4X\n", opcode);
                 break;
             }
             break;
