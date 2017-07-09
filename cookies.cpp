@@ -466,6 +466,14 @@ int main(int argc, const char ** argv)
         // E___ - Keyboard
         case 0xE000:
             switch (opcode & 0x00FF) {
+            /* Ex9E - SKP Vx
+            Skip next instruction if key with the value of Vx is pressed.
+            Checks the keyboard, and if the key corresponding to the value
+            of Vx is currently in the down position, PC is increased by 2. */
+            case 0x009E:
+                if (sf::Keyboard::isKeyPressed(keys[(opcode & 0x0F00) >> 8]))
+                    c8.PC += 2;
+                break;
             /* ExA1 - SKNP Vx
             Skip next instruction if key with the value of Vx is not pressed
             Checks the keyboard, and if the key corresponding to the value
@@ -475,7 +483,6 @@ int main(int argc, const char ** argv)
                     c8.PC += 2;
                 break;
             default:
-                printf("Error: unimplemented keyboard op: %.4X\n", opcode);
                 break;
             }
             break;
