@@ -564,16 +564,18 @@ int main(int argc, const char ** argv)
             Store registers V0 through Vx in memory starting at location I.
             The interpreter copies the values of registers V0 through Vx into
             memory, starting at the address in I. */
-            case 0x0055:
-                printf("Unimplemented instruction Fx55\n");
+            case 0x0055: {
+                u8 x = (u8) ((opcode & 0x0F00) >> 8);
+                for (int i = 0; i <= x; i++)
+                    c8.mem[c8.I + i] = c8.V[i];
                 break;
+            }
             /* Fx65 - LD Vx, [I]
             Read registers V0 through Vx from memory starting at location I.
             The interpreter reads values from memory starting at location I into
             registers V0 through Vx. */
             case 0x0065: {
-                u8 x = c8.V[(opcode & 0x0F00) >> 8];
-                x = (u8) (x < 16 ? x : 15);
+                u8 x = (u8) ((opcode & 0x0F00) >> 8);
                 for (int i = 0; i <= x; i++)
                     c8.V[i] = c8.mem[c8.I + i];
                 break;
