@@ -479,46 +479,39 @@ int main(int argc, const char ** argv)
         // Update screen
         int z = 0;
         for (int j = 0; j < 320; j += 10) {
-            for (int i = 0; i < 640; i += 10) {
+            for (int i = 0; i < 640; i += 80) {
                 u8 displaybyte = c8.display[z];
 
                 if (displaybyte & 0b10000000) {
                     rectangle.setPosition(i, j);
                     window.draw(rectangle);
                 }
-                i += 10;
                 if (displaybyte & 0b01000000) {
-                    rectangle.setPosition(i, j);
+                    rectangle.setPosition(i + 10, j);
                     window.draw(rectangle);
                 }
-                i += 10;
                 if (displaybyte & 0b00100000) {
-                    rectangle.setPosition(i, j);
+                    rectangle.setPosition(i + 20, j);
                     window.draw(rectangle);
                 }
-                i += 10;
                 if (displaybyte & 0b00010000) {
-                    rectangle.setPosition(i, j);
+                    rectangle.setPosition(i + 30, j);
                     window.draw(rectangle);
                 }
-                i += 10;
                 if (displaybyte & 0b00001000) {
-                    rectangle.setPosition(i, j);
+                    rectangle.setPosition(i + 40, j);
                     window.draw(rectangle);
                 }
-                i += 10;
                 if (displaybyte & 0b00000100) {
-                    rectangle.setPosition(i, j);
+                    rectangle.setPosition(i + 50, j);
                     window.draw(rectangle);
                 }
-                i += 10;
                 if (displaybyte & 0b00000010) {
-                    rectangle.setPosition(i, j);
+                    rectangle.setPosition(i + 60, j);
                     window.draw(rectangle);
                 }
-                i += 10;
                 if (displaybyte & 0b00000001) {
-                    rectangle.setPosition(i, j);
+                    rectangle.setPosition(i + 70, j);
                     window.draw(rectangle);
                 }
 
