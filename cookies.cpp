@@ -409,6 +409,12 @@ int main(int argc, const char ** argv)
         case 0xA000:
             c8.I = (u16) (opcode & 0x0FFF);
             break;
+        /* Bnnn - JP V0, addr
+        Jump to location nnn + V0.
+        The program counter is set to nnn plus the value of V0. */
+        case 0xB000:
+            c8.PC = (u16) ((opcode & 0x0FFF) + c8.V[0]);
+            break;
         /* Cxkk - RND Vx, byte
         Set Vx = random byte AND kk.
         The interpreter generates a random number from 0 to 255, which is
