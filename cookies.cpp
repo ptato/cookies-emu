@@ -568,6 +568,7 @@ int main(int argc, const char ** argv)
         }
 
         // Update screen
+        window.clear(sf::Color(0, 0, 0));
         int z = 0;
         for (int j = 0; j < 320; j += 10) {
             for (int i = 0; i < 640; i += 80) {
