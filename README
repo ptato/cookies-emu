@@ -1,6 +1,5 @@
 Cookies: A Chip-8 emulator/interpreter
 
-Quickly and loosely crafted in about a week as a learning experience on emulator
-development.
+Quickly and loosely crafted in about a week as a learning experience on emulator development.
 Its only dependency is SFML. 
 It *almost* works, but input is sketchy. 
