@@ -3,11 +3,11 @@ set(CMAKE_CXX_COMPILER "g++")
 project(Cookies CXX)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "C:/MinGW/cmake/Modules")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${Cookies_SOURCE_DIR})
 
 add_executable(Cookies cookies.cpp)
 
-find_package(SFML 2.4 COMPONENTS audio graphics window system)
+find_package(SFML 2 COMPONENTS audio graphics window system)
 if (SFML_FOUND)
     include_directories(${SFML_INCLUDE_DIR})
     target_link_libraries(Cookies ${SFML_LIBRARIES} ${SFML_DEPENDENCIES})
