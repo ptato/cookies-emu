@@ -1,42 +1,26 @@
-// Info source:
 // http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 
-#include <cstdint>
-#include <cstdio>
-#include <cstring>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "SDL.h"
 
-#include <SFML/Graphics/RectangleShape.hpp>
-#include <SFML/Graphics/RenderWindow.hpp>
-#include <SFML/Window/Event.hpp>
-
-using u8 = uint8_t;
-using u16 = uint16_t;
-
-// 1 2 3 C      1 2 3 4
-// 4 5 6 D      Q W E R
-// 7 8 9 E = >  A S D F
-// A 0 B F      Z X C V
-static const sf::Keyboard::Key keys[16]
+//     1 2 3 C       1 2 3 4
+//     4 5 6 D  ==>  Q W E R
+//     7 8 9 E  ==>  A S D F
+//     A 0 B F       Z X C V
+// TODO: I don't know what the fuck I did here
+static const SDL_Keycode keys[16] =
 {
-        sf::Keyboard::X,
-        sf::Keyboard::Num1,
-        sf::Keyboard::Num2,
-        sf::Keyboard::Num3,
-        sf::Keyboard::Q,
-        sf::Keyboard::W,
-        sf::Keyboard::E,
-        sf::Keyboard::A,
-        sf::Keyboard::S,
-        sf::Keyboard::D,
-        sf::Keyboard::Z,
-        sf::Keyboard::C,
-        sf::Keyboard::Num4,
-        sf::Keyboard::R,
-        sf::Keyboard::F,
-        sf::Keyboard::V
+        SDLK_x,
+        SDLK_1, SDLK_2, SDLK_3,
+        SDLK_q, SDLK_w, SDLK_e,
+        SDLK_a, SDLK_s, SDLK_d,
+        SDLK_z, SDLK_c,
+        SDLK_4, SDLK_r, SDLK_f, SDLK_v,
 };
 
-static const u8 sprites[80]
+static const unsigned char Sprites[80]
 {
         // 0
         0b11110000,
@@ -151,78 +135,84 @@ static const u8 sprites[80]
         0b10000000
 };
 
-struct Chip8_State
+struct chip8_state
 {
-    u8 V[0x0010];
-    u16 I;
-    u8 DT;
-    u8 ST;
-    u16 PC;
-    u16 SP;
-    u8 mem[0x1000];
-    u8 * display;
+    unsigned char V[0x0010];
+    uint16_t      I;
+    unsigned char DT;
+    unsigned char ST;
+    uint16_t      PC;
+    uint16_t      SP;
+    unsigned char M[0x1000];
+    unsigned char *DISP;
 
-    Chip8_State() : DT(0), ST(0), PC(0x200), SP(0xEA0) {
-        this->display = this->mem + 0xF00;
-        for (int i = 0; i < 256; i++)
-            this->display[i] = 0;
-    }
+    unsigned char RandomST;
 };
 
-inline bool ReadProgram(const char * program_path, Chip8_State * c8)
+static void Chip8InitialState(chip8_state *Out)
 {
-    FILE * program = fopen(program_path, "rb");
-    if (program == NULL) {
-        printf("Error: File %s doesn't exist\n", program_path);
+    chip8_state State = { 0 };
+    *Out = State;
+
+    Out->PC = 0x200;
+    Out->SP = 0xEA0;
+    Out->DISP = Out->M + 0xF00;
+    memcpy(Out->M, Sprites, sizeof(Sprites));
+
+    Out->RandomST = 1;
+}
+
+static bool ReadProgram(const char *Filename, chip8_state *C8)
+{
+    FILE *Program = fopen(Filename, "rb");
+    if (Program == NULL)
+    {
+        printf("Error: File %s doesn't exist\n", Filename);
         return false;
     }
 
-    fseek(program, 0, SEEK_END);
-    long program_size = ftell(program);
-    rewind(program);
+    fseek(Program, 0, SEEK_END);
+    long ProgramSize = ftell(Program);
+    rewind(Program);
 
-    fread(c8->mem + c8->PC, 1, (size_t) program_size, program);
+    fread(C8->M + C8->PC, 1, (size_t)ProgramSize, Program);
 
-    fclose(program);
+    fclose(Program);
     return true;
 }
 
 int main(int argc, const char ** argv)
 {
-    if (argc < 2) {
+    if (argc < 2)
+    {
         printf("Error: Program path not specified\n");
         printf("Usage: %s program-path\n", argv[0]);
         return 1;
     }
 
-    // Init CPU and memory
-    Chip8_State c8;
+    chip8_state Chip8;
+    Chip8InitialState(&Chip8);
 
-    // Load font to memory
-    memcpy(c8.mem, sprites, 80);
-
-    // Read program from file
     if (!ReadProgram(argv[1], &c8))
         return 1;
 
-    // Open window
-    sf::RenderWindow window(sf::VideoMode(640, 320), "Cookies");
+    SDL_Window *Window = SDL_CreateWindow("Cookies", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 320, 0);
 
-    u8 randomst = 1;
-    u16 opcode;
-    sf::Clock current_time;
-    int previous_time = current_time.getElapsedTime().asMilliseconds();
-    int period = 17;
-    sf::Event event;
+
+    uint32_t LastCounter = SDL_GetTicks();
+    uint32_t ClockPeriod = 17;
+
 
     sf::RectangleShape rectangle(sf::Vector2f(10, 10));
     rectangle.setFillColor(sf::Color(255, 255, 255));
-    while (window.isOpen()) {
-        opcode = c8.mem[c8.PC] << 8 | c8.mem[c8.PC + 1];
-        c8.PC += 0x0002;
 
-        // Process events
-        while (window.pollEvent(event)) {
+    while (window.isOpen()) {
+        uint16_t OPCode = C8.M[C8.PC] << 8 | C8.M[C8.PC + 1];
+        C8.PC += 0x0002;
+
+        sf::Event event;
+        while (window.pollEvent(event))
+        {
             if (event.type == sf::Event::Closed)
                 window.close();
         }
@@ -257,7 +247,7 @@ int main(int argc, const char ** argv)
         Jump to location nnn.
         The interpreter sets the program counter to nnn. */
         case 0x1000:
-            c8.PC = (u16) (opcode & 0x0FFF);
+            c8.PC = (uint16_t) (opcode & 0x0FFF);
             break;
         /* 2nnn - CALL addr
         Call subroutine at nnn.
@@ -265,9 +255,9 @@ int main(int argc, const char ** argv)
         on the top of the stack. The PC is then set to nnn. */
         case 0x2000:
             c8.SP += 2;
-            c8.mem[c8.SP] = (u8) (c8.PC >> 8);
-            c8.mem[c8.SP + 1] = (u8) c8.PC;
-            c8.PC = (u16) (opcode & 0x0FFF);
+            c8.mem[c8.SP] = (unsigned char) (c8.PC >> 8);
+            c8.mem[c8.SP + 1] = (unsigned char) c8.PC;
+            c8.PC = (uint16_t) (opcode & 0x0FFF);
             break;
         /* 3xkk - SE Vx, byte
         Skip next instruction if Vx = kk.
@@ -297,7 +287,7 @@ int main(int argc, const char ** argv)
         Set Vx = kk.
         The interpreter puts the value kk into register Vx. */
         case 0x6000:
-            c8.V[(opcode & 0x0F00) >> 8] = (u8) (opcode & 0x00FF);
+            c8.V[(opcode & 0x0F00) >> 8] = (unsigned char) (opcode & 0x00FF);
             break;
         /* 7xkk - ADD Vx, byte
         Set Vx = Vx + kk.
@@ -349,10 +339,10 @@ int main(int argc, const char ** argv)
             Only the lowest 8 bits of the result are kept, and
             stored in Vx. */
             case 0x0004: {
-                u8 x = c8.V[(opcode & 0x0F00) >> 8];
-                u8 y = c8.V[(opcode & 0x00F0) >> 4];
-                u8 r = x + y;
-                c8.V[0xF] = (u8) (r < x || r < y ? 0x0001 : 0x0000);
+                unsigned char x = c8.V[(opcode & 0x0F00) >> 8];
+                unsigned char y = c8.V[(opcode & 0x00F0) >> 4];
+                unsigned char r = x + y;
+                c8.V[0xF] = (unsigned char) (r < x || r < y ? 0x0001 : 0x0000);
                 c8.V[(opcode & 0x0F00) >> 8] = r;
                 break;
             }
@@ -361,9 +351,9 @@ int main(int argc, const char ** argv)
             If Vx > Vy, then VF is set to 1, otherwise 0. Then Vy is subtracted
             from Vx, and the results stored in Vx. */
             case 0x0005: {
-                u8 x = c8.V[(opcode & 0x0F00) >> 8];
-                u8 y = c8.V[(opcode & 0x00F0) >> 4];
-                c8.V[0xF] = (u8) (x > y ? 0x0001 : 0x0000);
+                unsigned char x = c8.V[(opcode & 0x0F00) >> 8];
+                unsigned char y = c8.V[(opcode & 0x00F0) >> 4];
+                c8.V[0xF] = (unsigned char) (x > y ? 0x0001 : 0x0000);
                 c8.V[(opcode & 0x0F00) >> 8] = x - y;
                 break;
             }
@@ -381,9 +371,9 @@ int main(int argc, const char ** argv)
             If Vy > Vx, then VF is set to 1, otherwise 0. Then Vx is
             subtracted from Vy, and the results stored in Vx. */
             case 0x0007: {
-                u8 x = c8.V[(opcode & 0x0F00) >> 8];
-                u8 y = c8.V[(opcode & 0x00F0) >> 4];
-                c8.V[0xF] = (u8) (y > x ? 0x0001 : 0x0000);
+                unsigned char x = c8.V[(opcode & 0x0F00) >> 8];
+                unsigned char y = c8.V[(opcode & 0x00F0) >> 4];
+                c8.V[0xF] = (unsigned char) (y > x ? 0x0001 : 0x0000);
                 c8.V[(opcode & 0x0F00) >> 8] = y - x;
                 break;
             }
@@ -412,13 +402,13 @@ int main(int argc, const char ** argv)
         Set I = nnn.
         The value of register I is set to nnn. */
         case 0xA000:
-            c8.I = (u16) (opcode & 0x0FFF);
+            c8.I = (uint16_t) (opcode & 0x0FFF);
             break;
         /* Bnnn - JP V0, addr
         Jump to location nnn + V0.
         The program counter is set to nnn plus the value of V0. */
         case 0xB000:
-            c8.PC = (u16) ((opcode & 0x0FFF) + c8.V[0]);
+            c8.PC = (uint16_t) ((opcode & 0x0FFF) + c8.V[0]);
             break;
         /* Cxkk - RND Vx, byte
         Set Vx = random byte AND kk.
@@ -426,12 +416,13 @@ int main(int argc, const char ** argv)
         then ANDed with the value kk. The results are stored in Vx. See
         instruction 8xy2 for more information on AND. */
         case 0xC000:
+        {
             // Xorshift
-            randomst ^= (randomst << 7);
-            randomst ^= (randomst >> 5);
-            randomst ^= (randomst << 3);
-            c8.V[(opcode & 0x0F00) >> 8] = (u8) (opcode & 0x00FF & randomst);
-            break;
+            C8.RandomST ^= (C8.RandomST << 7);
+            C8.RandomST ^= (C8.RandomST >> 5);
+            mst ^= (C8.RandomST << 3);
+            c8.V[(opcode & 0x0F00) >> 8] = (unsigned char) (opcode & 0x00FF & C8.RandomST);
+        } break;
         /* Dxyn - DRW Vx, Vy, nibble
         Display n-byte sprite starting at memory location I at (Vx, Vy),
         set VF = collision.
@@ -445,11 +436,11 @@ int main(int argc, const char ** argv)
         section 2.4, Display, for more information on the Chip-8 screen and
         sprites. */
         case 0xD000: {
-            u8 n = (u8) (opcode & 0x000F);
-            u8 x = c8.V[(opcode & 0x0F00) >> 8];
-            u8 y = c8.V[(opcode & 0x00F0) >> 4];
-            u8 display_byte = (u8) ((y * 64 + x) >> 3);
-            u8 offset = (u8) (x % 8);
+            unsigned char n = (unsigned char) (opcode & 0x000F);
+            unsigned char x = c8.V[(opcode & 0x0F00) >> 8];
+            unsigned char y = c8.V[(opcode & 0x00F0) >> 4];
+            unsigned char display_byte = (unsigned char) ((y * 64 + x) >> 3);
+            unsigned char offset = (unsigned char) (x % 8);
             c8.V[0xF] = 0;
             for (int i = 0; i < n; i++) {
                 if (offset != 0) {
@@ -516,7 +507,7 @@ int main(int argc, const char ** argv)
                             for (int i = 0; i < 16; i++) {
                                 if (event.key.code == keys[i]) {
                                     pressed = true;
-                                    c8.V[(opcode & 0x0F00) >> 8] = (u8) i;
+                                    c8.V[(opcode & 0x0F00) >> 8] = (unsigned char) i;
                                     break;
                                 }
                             }
@@ -551,7 +542,7 @@ int main(int argc, const char ** argv)
             corresponding to the value of Vx. See section 2.4, Display, for more
             information on the Chip-8 hexadecimal font. */
             case 0x0029:
-                c8.I = (u16) (c8.V[(opcode & 0x0F00) >> 8] * 5);
+                c8.I = (uint16_t) (c8.V[(opcode & 0x0F00) >> 8] * 5);
                 break;
             /* Fx33 - LD B, Vx
             Store BCD representation of Vx in memory locations I, I+1, and I+2.
@@ -559,10 +550,10 @@ int main(int argc, const char ** argv)
             hundreds digit in memory at location in I, the tens digit at
             location I+1, and the ones digit at location I+2. */
             case 0x0033: {
-                u8 x = c8.V[(opcode & 0x0F00) >> 8];
-                c8.mem[c8.I] = (u8) (x / 100);
-                c8.mem[c8.I + 1] = (u8) (x / 10 % 10);
-                c8.mem[c8.I + 2] = (u8) (x % 10);
+                unsigned char x = c8.V[(opcode & 0x0F00) >> 8];
+                c8.mem[c8.I] = (unsigned char) (x / 100);
+                c8.mem[c8.I + 1] = (unsigned char) (x / 10 % 10);
+                c8.mem[c8.I + 2] = (unsigned char) (x % 10);
                 break;
             }
             /* Fx55 - LD [I], Vx
@@ -570,7 +561,7 @@ int main(int argc, const char ** argv)
             The interpreter copies the values of registers V0 through Vx into
             memory, starting at the address in I. */
             case 0x0055: {
-                u8 x = (u8) ((opcode & 0x0F00) >> 8);
+                unsigned char x = (unsigned char) ((opcode & 0x0F00) >> 8);
                 for (int i = 0; i <= x; i++)
                     c8.mem[c8.I + i] = c8.V[i];
                 break;
@@ -580,7 +571,7 @@ int main(int argc, const char ** argv)
             The interpreter reads values from memory starting at location I into
             registers V0 through Vx. */
             case 0x0065: {
-                u8 x = (u8) ((opcode & 0x0F00) >> 8);
+                unsigned char x = (unsigned char) ((opcode & 0x0F00) >> 8);
                 for (int i = 0; i <= x; i++)
                     c8.V[i] = c8.mem[c8.I + i];
                 break;
@@ -599,7 +590,7 @@ int main(int argc, const char ** argv)
         int z = 0;
         for (int j = 0; j < 320; j += 10) {
             for (int i = 0; i < 640; i += 80) {
-                u8 displaybyte = c8.display[z];
+                unsigned char displaybyte = c8.display[z];
 
                 if (displaybyte & 0b10000000) {
                     rectangle.setPosition(i, j);
@@ -639,18 +630,17 @@ int main(int argc, const char ** argv)
         }
         window.display();
 
-        int new_time = current_time.getElapsedTime().asMilliseconds();
-        period -= (new_time - previous_time);
-        previous_time = new_time;
-        while (period <= 0) {
-            period += 17;
-            if (c8.DT > 0)
-                c8.DT -= 1;
-            if (c8.ST > 0)
-                c8.ST -= 1;
+        uint32_t EndCounter = SDL_GetTicks();
+        ClockPeriod = ClockPeriod - (EndCounter - LastCounter);
+        while (ClockPeriod <= 0)
+        {
+            ClockPeriod += 17;
+            if (C8.DT > 0) C8.DT--;
+            if (C8.ST > 0) C8.ST--;
         }
+
+        LastCounter = EndCounter;
     }
 
-    // Cleanup?
     return 0;
 }
