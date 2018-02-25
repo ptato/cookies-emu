@@ -147,6 +147,7 @@ struct chip8_state
     unsigned char *DISP;
 
     unsigned char RandomST;
+    bool Keys[16];
 };
 
 static void Chip8InitialState(chip8_state *Out)
@@ -193,7 +194,7 @@ int main(int argc, const char ** argv)
     chip8_state Chip8;
     Chip8InitialState(&Chip8);
 
-    if (!ReadProgram(argv[1], &c8))
+    if (!ReadProgram(argv[1], &Chip8))
         return 1;
 
     SDL_Window *Window = SDL_CreateWindow("Cookies", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 320, 0);
@@ -206,105 +207,139 @@ int main(int argc, const char ** argv)
     sf::RectangleShape rectangle(sf::Vector2f(10, 10));
     rectangle.setFillColor(sf::Color(255, 255, 255));
 
-    while (window.isOpen()) {
+    while (window.isOpen())
+    {
         uint16_t OPCode = C8.M[C8.PC] << 8 | C8.M[C8.PC + 1];
         C8.PC += 0x0002;
 
-        sf::Event event;
-        while (window.pollEvent(event))
+        SDL_Event Event;
+        while (SDL_PollEvent(Event))
         {
-            if (event.type == sf::Event::Closed)
-                window.close();
+            switch (Event.type) {
+                case SDL_QUIT:
+                {
+                    // window.close();
+                } break;
+
+                case SDL_WINDOWEVENT:
+                {
+                    SDL_WindowEvent *WindowEvent = &Event.window;
+                    switch (WindowEvent->event)
+                    {
+                        case SDL_WINDOWEVENT_CLOSE:
+                        {
+                            // return false;
+                        } break;
+                    }
+                } break;
+
+                case SDL_KEYDOWN:
+                case SDL_KEYUP:
+                {
+                    bool IsDown = Event.key.state == SDL_PRESSED;
+                    for (int KeyIndex = 0; KeyIndex < 16; KeyIndex++)
+                    {
+                        if (Event.key.keysym.sym == Keys[KeyIndex])
+                        {
+                            Chip8.Keys[KeyIndex] = IsDown;
+                        }
+                    }
+                } break;
+
+                default:
+                break;
+            }
         }
 
-        switch (opcode & 0xF000) {
+        switch (OPCode & 0xF000)
+        {
         /* 0___ - ??? */
         case 0x0000:
-            switch (opcode) {
+            switch (OPCode) 
+            {
             /* 00E0 - CLS
             Clear the display. */
             case 0x00E0:
-                for (int i = 0; i < 256; i++)
-                    c8.display[i] = 0;
-                break;
+                memset(Chip8.DISP, 0, 256);
+            break;
             /* 00EE - RET
             Return from a subroutine.
             The interpreter sets the program counter to the address at the top
             of the stack, then subtracts 1 from the stack pointer. */
             case 0x00EE:
-                c8.PC = (c8.mem[c8.SP] << 8) + c8.mem[c8.SP + 1];
-                c8.SP -= 2;
-                break;
+                Chip8.PC = (Chip8.M[Chip8.SP] << 8) + Chip8.M[Chip8.SP + 1];
+                Chip8.SP -= 2;
+            break;
             /* 0nnn - SYS addr
             Jump to a machine code routine at nnn.
             This instruction is only used on the old computers on which Chip-8
             was originally implemented. It is ignored by modern interpreters. */
             default:
-                break;
+            break;
             }
             break;
         /* 1nnn - JP addr
         Jump to location nnn.
         The interpreter sets the program counter to nnn. */
         case 0x1000:
-            c8.PC = (uint16_t) (opcode & 0x0FFF);
-            break;
+            Chip8.PC = (uint16_t)(OPCode & 0x0FFF);
+        break;
         /* 2nnn - CALL addr
         Call subroutine at nnn.
         The interpreter increments the stack pointer, then puts the current PC
         on the top of the stack. The PC is then set to nnn. */
         case 0x2000:
-            c8.SP += 2;
-            c8.mem[c8.SP] = (unsigned char) (c8.PC >> 8);
-            c8.mem[c8.SP + 1] = (unsigned char) c8.PC;
-            c8.PC = (uint16_t) (opcode & 0x0FFF);
-            break;
+            Chip8.SP += 2;
+            Chip8.M[Chip8.SP]     = (unsigned char)(Chip8.PC >> 8);
+            Chip8.M[Chip8.SP + 1] = (unsigned char) Chip8.PC;
+            Chip8.PC = (uint16_t)(OPCode & 0x0FFF);
+        break;
         /* 3xkk - SE Vx, byte
         Skip next instruction if Vx = kk.
         The interpreter compares register Vx to kk, and if they are equal,
         increments the program counter by 2. */
         case 0x3000:
-            if (c8.V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
-                c8.PC += 2;
-            break;
+            if (Chip8.V[(OPCode & 0x0F00) >> 8] == (OPCode & 0x00FF))
+                Chip8.PC += 2;
+        break;
         /* 4xkk - SNE Vx, byte
         Skip next instruction if Vx != kk.
         The interpreter compares register Vx to kk, and if they are not equal,
         increments the program counter by 2. */
         case 0x4000:
-            if (c8.V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
-                c8.PC += 2;
-            break;
+            if (Chip8.V[(OPCode & 0x0F00) >> 8] != (OPCode & 0x00FF))
+                Chip8.PC += 2;
+        break;
         /* 5xy0 - SE Vx, Vy
         Skip next instruction if Vx = Vy.
         The interpreter compares register Vx to register Vy, and if they are
         equal, increments the program counter by 2. */
         case 0x5000:
-            if (c8.V[(opcode & 0x0F00) >> 8] == c8.V[(opcode & 0x0FF0) >> 4])
-                c8.PC += 2;
-            break;
+            if (Chip8.V[(OPCode & 0x0F00) >> 8] == Chip8.V[(OPCode & 0x0FF0) >> 4])
+                Chip8.PC += 2;
+        break;
         /* 6xkk - LD Vx, byte
         Set Vx = kk.
         The interpreter puts the value kk into register Vx. */
         case 0x6000:
-            c8.V[(opcode & 0x0F00) >> 8] = (unsigned char) (opcode & 0x00FF);
-            break;
+            Chip8.V[(OPCode & 0x0F00) >> 8] = (unsigned char)(OPCode & 0x00FF);
+        break;
         /* 7xkk - ADD Vx, byte
         Set Vx = Vx + kk.
         Adds the value kk to the value of register Vx, then stores the
         result in Vx. */
         case 0x7000:
-            c8.V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
-            break;
-        /* 8___ - ALU or some shit */
+            Chip8.V[(OPCode & 0x0F00) >> 8] += OPCode & 0x00FF;
+        break;
+        /* 8___ - Aritmetic/Logic */
         case 0x8000:
-            switch (opcode & 0x000F) {
+            switch (OPCode & 0x000F) {
             /* 8xy0 - LD Vx, Vy
             Set Vx = Vy.
             Stores the value of register Vy in register Vx. */
             case 0x0000:
-                c8.V[(opcode & 0x0F00) >> 8] = c8.V[(opcode & 0x00F0) >> 4];
-                break;
+                Chip8.V[(OPCode & 0x0F00) >> 8] = Chip8.V[(OPCode & 0x00F0) >> 4];
+            break;
             /* 8xy1 - OR Vx, Vy
             Set Vx = Vx OR Vy.
             Performs a bitwise OR on the values of Vx and Vy, then stores the
@@ -312,8 +347,8 @@ int main(int argc, const char ** argv)
             two values, and if either bit is 1, then the same bit in the result
             is also 1. Otherwise, it is 0. */
             case 0x0001:
-                c8.V[(opcode & 0x0F00) >> 8] |= c8.V[(opcode & 0x00F0) >> 4];
-                break;
+                Chip8.V[(OPCode & 0x0F00) >> 8] |= Chip8.V[(OPCode & 0x00F0) >> 4];
+            break;
             /* 8xy2 - AND Vx, Vy
             Set Vx = Vx AND Vy.
             Performs a bitwise AND on the values of Vx and Vy, then stores
@@ -321,8 +356,8 @@ int main(int argc, const char ** argv)
             from two values, and if both bits are 1, then the same bit in
             the result is also 1. Otherwise, it is 0. */
             case 0x0002:
-                c8.V[(opcode & 0x0F00) >> 8] &= c8.V[(opcode & 0x00F0) >> 4];
-                break;
+                Chip8.V[(OPCode & 0x0F00) >> 8] &= Chip8.V[(OPCode & 0x00F0) >> 4];
+            break;
             /* 8xy3 - XOR Vx, Vy
             Set Vx = Vx XOR Vy.
             Performs a bitwise exclusive OR on the values of Vx and Vy, then
@@ -331,7 +366,7 @@ int main(int argc, const char ** argv)
             the corresponding bit in the result is set to 1. Otherwise, it is 0. */
             case 0x0003:
                 c8.V[(opcode & 0x0F00) >> 8] ^= c8.V[(opcode & 0x00F0) >> 4];
-                break;
+            break;
             /* 8xy4 - ADD Vx, Vy
             Set Vx = Vx + Vy, set VF = carry.
             The values of Vx and Vy are added together. If the result is
